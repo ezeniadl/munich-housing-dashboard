@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>München Housing</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:        #0d0f14;
+      --surface:   #161923;
+      --surface2:  #1e2433;
+      --border:    #272d3d;
+      --accent:    #4f8ef7;
+      --accent2:   #a78bfa;
+      --green:     #34d399;
+      --amber:     #fbbf24;
+      --red:       #f87171;
+      --text:      #e2e8f0;
+      --muted:     #64748b;
+      --card-w:    420px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Noise texture overlay ── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.04'/%3E%3C/svg%3E");
+      pointer-events: none; z-index: 0; opacity: .5;
+    }
+
+    /* ── Header ── */
+    header {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(13,15,20,.85);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 32px;
+      display: flex; align-items: center; gap: 24px;
+      height: 64px;
+    }
+    .logo {
+      font-family: 'DM Serif Display', serif;
+      font-size: 20px;
+      letter-spacing: -.02em;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .logo span { font-style: italic; }
+    .stats-bar {
+      display: flex; gap: 20px; margin-left: auto; align-items: center;
+    }
+    .stat { text-align: right; }
+    .stat-val { font-size: 18px; font-weight: 600; color: var(--text); }
+    .stat-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+    .last-updated { font-size: 11px; color: var(--muted); white-space: nowrap; }
+
+    /* ── Filters ── */
+    .filter-bar {
+      padding: 16px 32px;
+      display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+      border-bottom: 1px solid var(--border);
+      position: relative; z-index: 1;
+    }
+    .filter-btn {
+      padding: 6px 14px; border-radius: 100px;
+      border: 1px solid var(--border);
+      background: var(--surface); color: var(--muted);
+      cursor: pointer; font-size: 12px; font-family: inherit;
+      transition: all .15s;
+    }
+    .filter-btn:hover, .filter-btn.active {
+      border-color: var(--accent); color: var(--accent); background: rgba(79,142,247,.08);
+    }
+    .search-input {
+      margin-left: auto;
+      padding: 6px 14px; border-radius: 100px;
+      border: 1px solid var(--border); background: var(--surface);
+      color: var(--text); font-size: 12px; font-family: inherit;
+      width: 200px; outline: none;
+      transition: border-color .15s;
+    }
+    .search-input:focus { border-color: var(--accent); }
+
+    /* ── Main layout ── */
+    main {
+      position: relative; z-index: 1;
+      padding: 28px 32px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(var(--card-w), 1fr));
+      gap: 20px;
+    }
+
+    /* ── Card ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      display: flex; flex-direction: column;
+      transition: transform .2s, box-shadow .2s, border-color .2s;
+      animation: slideUp .35s ease both;
+    }
+    .card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 40px rgba(0,0,0,.4);
+      border-color: rgba(79,142,247,.3);
+    }
+    @keyframes slideUp {
+      from { opacity:0; transform: translateY(16px); }
+      to   { opacity:1; transform: translateY(0); }
+    }
+
+    .card-img {
+      width: 100%; height: 180px; object-fit: cover;
+      background: var(--surface2);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--muted); font-size: 13px;
+      flex-shrink: 0;
+    }
+    .card-img img { width: 100%; height: 100%; object-fit: cover; }
+
+    .card-body { padding: 18px; flex: 1; display: flex; flex-direction: column; gap: 10px; }
+
+    .card-top {
+      display: flex; justify-content: space-between; align-items: flex-start;
+    }
+    .platform-badge {
+      font-size: 10px; text-transform: uppercase; letter-spacing: .08em;
+      padding: 3px 8px; border-radius: 100px;
+      background: var(--surface2); color: var(--muted); border: 1px solid var(--border);
+    }
+    .score-badge {
+      font-size: 13px; font-weight: 700;
+      padding: 4px 11px; border-radius: 100px;
+    }
+    .score-high  { background: rgba(52,211,153,.15); color: var(--green); border: 1px solid rgba(52,211,153,.3); }
+    .score-mid   { background: rgba(251,191,36,.12);  color: var(--amber); border: 1px solid rgba(251,191,36,.3); }
+    .score-low   { background: rgba(248,113,113,.12); color: var(--red);   border: 1px solid rgba(248,113,113,.3); }
+
+    .card-title {
+      font-family: 'DM Serif Display', serif;
+      font-size: 16px; line-height: 1.35;
+      color: var(--text);
+    }
+    .card-title a { color: inherit; text-decoration: none; }
+    .card-title a:hover { color: var(--accent); }
+
+    .price-row {
+      display: flex; align-items: baseline; gap: 6px;
+    }
+    .price { font-size: 26px; font-weight: 600; color: var(--accent); }
+    .price-label { font-size: 12px; color: var(--muted); }
+    .util-tag {
+      font-size: 11px; padding: 2px 8px; border-radius: 100px; margin-left: 6px;
+    }
+    .util-incl { background: rgba(52,211,153,.1); color: var(--green); border: 1px solid rgba(52,211,153,.25); }
+    .util-extra { background: rgba(251,191,36,.1);  color: var(--amber); border: 1px solid rgba(251,191,36,.25); }
+
+    .meta-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+    }
+    .meta-item {
+      background: var(--surface2);
+      border-radius: 8px; padding: 8px 10px;
+      display: flex; flex-direction: column; gap: 2px;
+    }
+    .meta-val { font-size: 13px; font-weight: 500; color: var(--text); }
+    .meta-key { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+
+    .dist-bar {
+      display: flex; gap: 8px;
+    }
+    .dist-pill {
+      flex: 1; background: var(--surface2); border-radius: 8px; padding: 8px 10px; text-align: center;
+    }
+    .dist-val { font-size: 14px; font-weight: 600; }
+    .dist-city { color: var(--accent); }
+    .dist-tum  { color: var(--accent2); }
+    .dist-key  { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-top: 1px; }
+
+    .ai-reason {
+      background: var(--surface2);
+      border-left: 2px solid var(--accent2);
+      border-radius: 0 8px 8px 0;
+      padding: 10px 12px;
+      font-size: 12px; line-height: 1.5; color: #94a3b8;
+      font-style: italic;
+    }
+
+    /* ── Message section ── */
+    .msg-section { border-top: 1px solid var(--border); padding: 14px 18px; }
+    .msg-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 8px; }
+    .msg-textarea {
+      width: 100%; min-height: 100px;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 8px; padding: 10px 12px;
+      color: var(--text); font-family: inherit; font-size: 12px;
+      line-height: 1.6; resize: vertical; outline: none;
+      transition: border-color .15s;
+    }
+    .msg-textarea:focus { border-color: var(--accent); }
+
+    .action-row {
+      display: flex; gap: 8px; margin-top: 10px;
+    }
+    .btn {
+      flex: 1; padding: 10px; border-radius: 10px;
+      border: none; cursor: pointer; font-family: inherit;
+      font-size: 12px; font-weight: 600; letter-spacing: .02em;
+      transition: all .15s;
+    }
+    .btn-approve {
+      background: rgba(52,211,153,.15); color: var(--green);
+      border: 1px solid rgba(52,211,153,.3);
+    }
+    .btn-approve:hover { background: rgba(52,211,153,.25); }
+    .btn-reject {
+      background: rgba(248,113,113,.1); color: var(--red);
+      border: 1px solid rgba(248,113,113,.25);
+      flex: 0 0 auto; width: 80px;
+    }
+    .btn-reject:hover { background: rgba(248,113,113,.2); }
+    .btn-view {
+      background: rgba(79,142,247,.1); color: var(--accent);
+      border: 1px solid rgba(79,142,247,.25);
+      flex: 0 0 auto; width: 80px; text-decoration: none;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .btn-view:hover { background: rgba(79,142,247,.2); }
+
+    .status-chip {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 6px 12px; border-radius: 100px; font-size: 11px; font-weight: 600;
+    }
+    .status-approved { background: rgba(52,211,153,.15); color: var(--green); }
+    .status-rejected { background: rgba(248,113,113,.1);  color: var(--red); }
+    .status-sent     { background: rgba(79,142,247,.1);   color: var(--accent); }
+
+    /* ── Empty / loading ── */
+    .empty {
+      grid-column: 1/-1;
+      text-align: center; padding: 80px 20px;
+      color: var(--muted); font-size: 15px;
+    }
+    .empty .icon { font-size: 48px; margin-bottom: 12px; }
+    .loading { grid-column:1/-1; text-align:center; padding:60px; color:var(--muted); }
+
+    /* ── Section label ── */
+    .section-header {
+      grid-column: 1/-1;
+      display: flex; align-items: center; gap: 12px;
+      padding: 4px 0 8px;
+    }
+    .section-title {
+      font-family: 'DM Serif Display', serif;
+      font-size: 18px; color: var(--text);
+    }
+    .section-line { flex:1; height:1px; background: var(--border); }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed; bottom: 28px; right: 28px; z-index: 1000;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 12px; padding: 12px 18px;
+      font-size: 13px; color: var(--text);
+      box-shadow: 0 8px 32px rgba(0,0,0,.4);
+      animation: toastIn .25s ease;
+      max-width: 300px;
+    }
+    @keyframes toastIn {
+      from { opacity:0; transform: translateY(12px); }
+      to   { opacity:1; transform: translateY(0); }
+    }
+
+    @media (max-width: 700px) {
+      header { padding: 0 16px; }
+      .filter-bar, main { padding-left: 16px; padding-right: 16px; }
+      :root { --card-w: 320px; }
+      .stats-bar .stat:not(:last-child) { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">München <span>Housing</span></div>
+  <div class="stats-bar">
+    <div class="stat">
+      <div class="stat-val" id="stat-new">—</div>
+      <div class="stat-label">New Today</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val" id="stat-pending">—</div>
+      <div class="stat-label">Pending</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val" id="stat-total">—</div>
+      <div class="stat-label">Total</div>
+    </div>
+    <div class="last-updated" id="last-updated"></div>
+  </div>
+</header>
+
+<div class="filter-bar">
+  <button class="filter-btn active" data-filter="all">All</button>
+  <button class="filter-btn" data-filter="pending">⏳ Pending</button>
+  <button class="filter-btn" data-filter="approved">✅ Approved</button>
+  <button class="filter-btn" data-filter="rejected">❌ Rejected</button>
+  <button class="filter-btn" data-filter="sent">📨 Sent</button>
+  <button class="filter-btn" data-filter="high">🔥 Score 70+</button>
+  <input class="search-input" id="search" placeholder="Search listings…" />
+</div>
+
+<main id="cards-grid">
+  <div class="loading">Loading listings…</div>
+</main>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+const LISTINGS_URL = './listings.json';
+let allListings = [];
+let decisions = JSON.parse(localStorage.getItem('decisions') || '{}');
+let activeFilter = 'all';
+let searchQuery = '';
+
+// ── Boot ───────────────────────────────────────────────────────────────────
+async function boot() {
+  try {
+    const res = await fetch(LISTINGS_URL + '?t=' + Date.now());
+    const data = await res.json();
+    allListings = data.listings || [];
+
+    const exportedAt = new Date(data.exported_at);
+    document.getElementById('last-updated').textContent =
+      'Updated ' + exportedAt.toLocaleString('en-GB', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
+
+    updateStats();
+    render();
+  } catch(e) {
+    document.getElementById('cards-grid').innerHTML =
+      `<div class="empty"><div class="icon">🏗️</div>
+       Could not load listings.json<br>
+       <small style="opacity:.5;font-size:12px;">Run the agent first: <code>python agent.py</code></small></div>`;
+  }
+}
+
+// ── Stats ──────────────────────────────────────────────────────────────────
+function updateStats() {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const newToday = allListings.filter(l => new Date(l.first_seen) >= today).length;
+  const pending  = allListings.filter(l => effectiveStatus(l) === 'pending').length;
+
+  document.getElementById('stat-new').textContent     = newToday;
+  document.getElementById('stat-pending').textContent = pending;
+  document.getElementById('stat-total').textContent   = allListings.length;
+}
+
+function effectiveStatus(l) {
+  return decisions[l.id] || l.msg_status || 'pending';
+}
+
+// ── Filter + Search ────────────────────────────────────────────────────────
+function filteredListings() {
+  return allListings.filter(l => {
+    const status = effectiveStatus(l);
+    const q = searchQuery.toLowerCase();
+
+    const matchesFilter =
+      activeFilter === 'all'      ? true :
+      activeFilter === 'high'     ? (l.ai_score || 0) >= 70 :
+      status === activeFilter;
+
+    const matchesSearch = !q || [l.title, l.district, l.address, l.platform]
+      .some(s => (s||'').toLowerCase().includes(q));
+
+    return matchesFilter && matchesSearch;
+  }).sort((a,b) => (b.ai_score||0) - (a.ai_score||0));
+}
+
+// ── Render ─────────────────────────────────────────────────────────────────
+function render() {
+  const grid = document.getElementById('cards-grid');
+  const list = filteredListings();
+
+  if (!list.length) {
+    grid.innerHTML = `<div class="empty"><div class="icon">🔍</div>No listings match this filter.</div>`;
+    return;
+  }
+
+  // Group: pending first, then others
+  const pending  = list.filter(l => effectiveStatus(l) === 'pending');
+  const reviewed = list.filter(l => effectiveStatus(l) !== 'pending');
+
+  let html = '';
+  if (pending.length) {
+    html += `<div class="section-header">
+      <div class="section-title">Needs Review</div>
+      <div class="section-line"></div>
+      <span style="font-size:12px;color:var(--muted)">${pending.length} listing${pending.length!==1?'s':''}</span>
+    </div>`;
+    html += pending.map((l,i) => cardHTML(l, i * 60)).join('');
+  }
+  if (reviewed.length) {
+    html += `<div class="section-header" style="margin-top:${pending.length?'12px':'0'}">
+      <div class="section-title">Reviewed</div>
+      <div class="section-line"></div>
+    </div>`;
+    html += reviewed.map((l,i) => cardHTML(l, i * 30)).join('');
+  }
+
+  grid.innerHTML = html;
+
+  // Bind textareas
+  grid.querySelectorAll('.msg-textarea').forEach(ta => {
+    ta.addEventListener('input', () => {
+      decisions[ta.dataset.id + '_msg'] = ta.value;
+      localStorage.setItem('decisions', JSON.stringify(decisions));
+    });
+  });
+}
+
+function scoreClass(s) {
+  return s >= 70 ? 'score-high' : s >= 50 ? 'score-mid' : 'score-low';
+}
+
+function cardHTML(l, delay = 0) {
+  const status   = effectiveStatus(l);
+  const score    = Math.round(l.ai_score || 0);
+  const images   = Array.isArray(l.images) ? l.images : (JSON.parse(l.images||'[]'));
+  const ages     = Array.isArray(l.occupant_ages) ? l.occupant_ages : [];
+
+  const imgHTML  = images[0]
+    ? `<div class="card-img"><img src="${esc(images[0])}" loading="lazy" onerror="this.parentNode.innerHTML='📷 No image'" /></div>`
+    : `<div class="card-img">📷 No image</div>`;
+
+  const utilTag  = l.utilities_included
+    ? `<span class="util-tag util-incl">Utilities incl.</span>`
+    : `<span class="util-tag util-extra">+ ~€${Math.round(l.utilities_est||80)} utilities</span>`;
+
+  const distCity = l.dist_city_km != null ? l.dist_city_km.toFixed(1) + ' km' : '?';
+  const distTUM  = l.dist_garching_km != null ? l.dist_garching_km.toFixed(1) + ' km' : '?';
+
+  const mates    = l.num_roommates != null ? l.num_roommates + ' roommate' + (l.num_roommates!==1?'s':'') : '? roommates';
+  const agesStr  = ages.length ? ages.join(', ') + ' yrs' : 'Ages unknown';
+  const size     = l.room_size_sqm ? l.room_size_sqm + ' m²' : '? m²';
+
+  const savedMsg = decisions[l.id + '_msg'] || l.draft_message || '';
+
+  let actionHTML = '';
+  if (status === 'pending') {
+    actionHTML = `
+      <div class="msg-section">
+        <div class="msg-label">✉️ Draft message — review &amp; edit before approving</div>
+        <textarea class="msg-textarea" data-id="${esc(l.id)}">${esc(savedMsg)}</textarea>
+        <div class="action-row">
+          <button class="btn btn-approve" onclick="decide('${esc(l.id)}','approved')">✅ Approve &amp; Send</button>
+          <a class="btn btn-view" href="${esc(l.url)}" target="_blank">🔗 View</a>
+          <button class="btn btn-reject" onclick="decide('${esc(l.id)}','rejected')">✕ Skip</button>
+        </div>
+      </div>`;
+  } else {
+    const chipClass = `status-${status}`;
+    const chipText  = status === 'approved' ? '✅ Approved' : status === 'sent' ? '📨 Sent' : '❌ Skipped';
+    actionHTML = `
+      <div class="msg-section" style="display:flex;justify-content:space-between;align-items:center;">
+        <span class="status-chip ${chipClass}">${chipText}</span>
+        <a class="btn btn-view" href="${esc(l.url)}" target="_blank" style="width:auto;padding:6px 14px;">🔗 View listing</a>
+      </div>`;
+  }
+
+  return `
+  <div class="card" id="card-${esc(l.id)}" style="animation-delay:${delay}ms">
+    ${imgHTML}
+    <div class="card-body">
+      <div class="card-top">
+        <span class="platform-badge">${esc((l.platform||'').replace('-',' '))}</span>
+        <span class="score-badge ${scoreClass(score)}">${score}/100</span>
+      </div>
+      <div class="card-title"><a href="${esc(l.url)}" target="_blank">${esc(l.title||'Untitled listing')}</a></div>
+      <div class="price-row">
+        <span class="price">€${Math.round(l.price_eur||0)}</span>
+        <span class="price-label">/month</span>
+        ${utilTag}
+      </div>
+      <div class="dist-bar">
+        <div class="dist-pill">
+          <div class="dist-val dist-city">${distCity}</div>
+          <div class="dist-key">from city centre</div>
+        </div>
+        <div class="dist-pill">
+          <div class="dist-val dist-tum">${distTUM}</div>
+          <div class="dist-key">from TUM Garching</div>
+        </div>
+      </div>
+      <div class="meta-grid">
+        <div class="meta-item">
+          <div class="meta-val">${esc(mates)}</div>
+          <div class="meta-key">Flatmates</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-val">${esc(agesStr)}</div>
+          <div class="meta-key">Occupant ages</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-val">${esc(size)}</div>
+          <div class="meta-key">Room size</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-val">${l.furnished ? '🛋️ Yes' : '🪑 No'}</div>
+          <div class="meta-key">Furnished</div>
+        </div>
+      </div>
+      ${l.ai_rank_reason ? `<div class="ai-reason">${esc(l.ai_rank_reason)}</div>` : ''}
+      <div style="font-size:11px;color:var(--muted)">
+        📍 ${esc(l.district || l.address || 'Munich')}
+        ${l.available_from ? ' · From ' + esc(l.available_from) : ''}
+      </div>
+    </div>
+    ${actionHTML}
+  </div>`;
+}
+
+// ── Decisions ──────────────────────────────────────────────────────────────
+function decide(id, status) {
+  decisions[id] = status;
+  // Also save the textarea message
+  const ta = document.querySelector(`.msg-textarea[data-id="${id}"]`);
+  if (ta) decisions[id + '_msg'] = ta.value;
+  localStorage.setItem('decisions', JSON.stringify(decisions));
+  updateStats();
+  render();
+  toast(status === 'approved'
+    ? '✅ Approved — run <code>python agent.py --send</code> to send'
+    : '❌ Listing skipped');
+}
+
+// ── Toast ──────────────────────────────────────────────────────────────────
+function toast(msg) {
+  const el = document.createElement('div');
+  el.className = 'toast'; el.innerHTML = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+
+// ── Utils ──────────────────────────────────────────────────────────────────
+function esc(s) {
+  if (s == null) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+                  .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// ── Event bindings ─────────────────────────────────────────────────────────
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeFilter = btn.dataset.filter;
+    render();
+  });
+});
+
+document.getElementById('search').addEventListener('input', e => {
+  searchQuery = e.target.value;
+  render();
+});
+
+// ── Init ───────────────────────────────────────────────────────────────────
+boot();
+</script>
+</body>
+</html>
