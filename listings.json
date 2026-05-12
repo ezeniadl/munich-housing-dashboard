@@ -1,5 +1,5 @@
 {
-  "exported_at": "2026-05-12T18:13:26.057716",
+  "exported_at": "2026-05-12T18:45:39.524919",
   "total": 1,
   "listings": [
     {
@@ -32,7 +32,7 @@
       "msg_status": "pending",
       "msg_sent_at": null,
       "first_seen": "2026-05-11 22:37:49",
-      "last_seen": "2026-05-12 22:13:19",
+      "last_seen": "2026-05-12 22:45:39",
       "raw_json": "{\"id\": \"klz-3405361432\", \"platform\": \"kleinanzeigen\", \"title\": \"Wohnung 1OG 780 \\u20ac Festpreis\", \"url\": \"https://www.kleinanzeigen.de/s-anzeige/wohnung-1og-780-festpreis/3405361432-203-1294\", \"price_eur\": 780.0, \"utilities_included\": false, \"utilities_est\": 80.0, \"address\": \"(527 km)\", \"district\": \"48565 Steinfurt\", \"lat\": null, \"lng\": null, \"dist_city_km\": null, \"dist_garching_km\": null, \"room_size_sqm\": null, \"num_roommates\": null, \"occupant_ages\": [], \"furnished\": false, \"available_from\": \"\", \"available_until\": \"\", \"description\": \"Sch\\u00f6ne helle Wohnung in einem Einfamilienhaus. Sch\\u00f6ne Lage am Waldrand. Zum 1.7.2026 frei\", \"images\": [], \"is_exchange\": false, \"is_sublet\": false}"
     }
   ]
